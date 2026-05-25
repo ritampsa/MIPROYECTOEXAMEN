@@ -1,0 +1,76 @@
+C4Container
+title FTGO – Diagrama de contenedores (nivel 2)
+
+Person(consumer, "Consumidor", "Usuario final que ordena comida")
+Person(restaurant, "Restaurante", "Operador de cocina")
+Person(courier, "Courier", "Repartidor")
+Person(backoffice, "Empleado FTGO", "Back office")
+
+System_Ext(stripe, "Stripe", "Pasarela de pago")
+System_Ext(gmaps, "Google Maps", "Geocoding y rutas")
+System_Ext(sendgrid, "SendGrid", "Email")
+System_Ext(twilio, "Twilio", "SMS y push")
+System_Ext(legacy, "Monolito Legacy", "Sistema existente")
+
+System_Boundary(ftgo, "FTGO Platform") {
+    Container(mobile_app, "Mobile App", "React Native", "App del consumidor para ordenar y trackear")
+    Container(web_admin, "Web Admin", "React", "Dashboard para restaurantes, couriers y back office")
+
+    Container(consumer_svc, "Consumer Service", "Java/Spring Boot", "Registro, perfiles, direcciones, preferencias")
+    ContainerDb(consumer_db, "Consumer DB", "PostgreSQL", "Datos de consumidores")
+
+    Container(restaurant_svc, "Restaurant Service", "Java/Spring Boot", "Menús, horarios, disponibilidad")
+    ContainerDb(restaurant_db, "Restaurant DB", "PostgreSQL", "Datos de restaurantes y menús")
+
+    Container(order_svc, "Order Service", "Java/Spring Boot", "Toma de pedidos, validación, cálculo de total")
+    ContainerDb(order_db, "Order DB", "PostgreSQL", "Pedidos, ítems, estados")
+
+    Container(kitchen_svc, "Kitchen Service", "Java/Spring Boot", "Tickets de cocina, aceptación/rechazo, tiempo preparación")
+    ContainerDb(kitchen_db, "Kitchen DB", "PostgreSQL", "Tickets y estado de preparación")
+
+    Container(delivery_svc, "Delivery Service", "Java/Spring Boot", "Asignación de couriers, rutas, tracking GPS")
+    ContainerDb(delivery_db, "Delivery DB", "PostgreSQL", "Asignaciones y rutas")
+
+    Container(billing_svc, "Billing Service", "Java/Spring Boot", "Cobros, comisiones, payouts a restaurantes y couriers")
+    ContainerDb(billing_db, "Billing DB", "PostgreSQL", "Transacciones y facturación")
+
+    Container(notification_svc, "Notification Service", "Java/Spring Boot", "Emails, SMS, push: confirmaciones, alertas, recibos")
+
+    ContainerQueue(kafka, "Event Broker", "Apache Kafka", "Bus de eventos asíncronos entre servicios")
+}
+
+Rel(consumer, mobile_app, "Usa", "iOS/Android")
+Rel(restaurant, web_admin, "Usa", "HTTPS")
+Rel(courier, mobile_app, "Usa", "iOS/Android")
+Rel(backoffice, web_admin, "Usa", "HTTPS")
+
+Rel(mobile_app, consumer_svc, "Gestiona perfil", "JSON/HTTPS, REST")
+Rel(mobile_app, restaurant_svc, "Consulta menús", "JSON/HTTPS, REST")
+Rel(mobile_app, order_svc, "Crea y confirma pedidos", "JSON/HTTPS, REST")
+Rel(mobile_app, delivery_svc, "Ve tracking en tiempo real", "JSON/HTTPS, REST")
+Rel(web_admin, restaurant_svc, "Gestiona menús y horarios", "JSON/HTTPS, REST")
+Rel(web_admin, kitchen_svc, "Acepta/rechaza tickets", "JSON/HTTPS, REST")
+Rel(web_admin, delivery_svc, "Monitorea entregas", "JSON/HTTPS, REST")
+Rel(web_admin, billing_svc, "Consulta reportes", "JSON/HTTPS, REST")
+
+Rel(order_svc, order_db, "Lee/Escribe", "JDBC")
+Rel(consumer_svc, consumer_db, "Lee/Escribe", "JDBC")
+Rel(restaurant_svc, restaurant_db, "Lee/Escribe", "JDBC")
+Rel(kitchen_svc, kitchen_db, "Lee/Escribe", "JDBC")
+Rel(delivery_svc, delivery_db, "Lee/Escribe", "JDBC")
+Rel(billing_svc, billing_db, "Lee/Escribe", "JDBC")
+
+Rel(order_svc, kafka, "Publica OrderCreated, OrderConfirmed", "Kafka protocol")
+Rel(kitchen_svc, kafka, "Publica TicketAccepted, TicketRejected", "Kafka protocol")
+Rel(delivery_svc, kafka, "Publica DeliveryAssigned, DeliveryCompleted", "Kafka protocol")
+Rel(billing_svc, kafka, "Publica PaymentProcessed, PaymentFailed", "Kafka protocol")
+Rel(notification_svc, kafka, "Consume eventos y envía notificaciones", "Kafka protocol")
+Rel(kafka, notification_svc, "Entrega eventos", "Kafka protocol")
+
+Rel(order_svc, stripe, "Procesa cobros síncronos", "JSON/HTTPS, REST")
+Rel(delivery_svc, gmaps, "Optimiza rutas y geocodifica", "JSON/HTTPS, REST")
+Rel(notification_svc, sendgrid, "Envía emails", "SMTP/HTTPS")
+Rel(notification_svc, twilio, "Envía SMS/push", "HTTPS/REST")
+Rel(order_svc, legacy, "Consulta datos durante migración", "JSON/HTTPS")
+
+UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="2")
